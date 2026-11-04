@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController : MonoBehaviour
@@ -20,7 +21,6 @@ public class PlayerController : MonoBehaviour
     private bool isGrounded;
     private bool isFacingRight = true;
 
-    // Animation Triggers / Hash IDs
     private static readonly int SpeedHash = Animator.StringToHash("Speed");
     private static readonly int IsGroundedHash = Animator.StringToHash("IsGrounded");
     private static readonly int JumpTriggerHash = Animator.StringToHash("Jump");
@@ -34,33 +34,24 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        
-        horizontalInput = Input.GetAxisRaw("Horizontal");
-
         if (groundCheck != null)
         {
             isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
         }
 
-        
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (horizontalInput > 0)
         {
-            Jump();
+            isFacingRight = true;
+            Vector3 scale = transform.localScale;
+            scale.x = Mathf.Abs(scale.x);
+            transform.localScale = scale;
         }
-
-        
-        if (Input.GetKeyDown(KeyCode.G))
+        else if (horizontalInput < 0)
         {
-            Attack();
-        }
-
-        if (horizontalInput > 0 && !isFacingRight)
-        {
-            Flip();
-        }
-        else if (horizontalInput < 0 && isFacingRight)
-        {
-            Flip();
+            isFacingRight = false;
+            Vector3 scale = transform.localScale;
+            scale.x = -Mathf.Abs(scale.x);
+            transform.localScale = scale;
         }
 
         UpdateAnimations();
@@ -69,6 +60,28 @@ public class PlayerController : MonoBehaviour
     private void FixedUpdate()
     {
         rb.linearVelocity = new Vector2(horizontalInput * moveSpeed, rb.linearVelocity.y);
+    }
+
+    public void OnMove(InputValue value)
+    {
+        Vector2 moveVal = value.Get<Vector2>();
+        horizontalInput = moveVal.x;
+    }
+
+    public void OnJump(InputValue value)
+    {
+        if (value.isPressed)
+        {
+            Jump();
+        }
+    }
+
+    public void OnAttack(InputValue value)
+    {
+        if (value.isPressed)
+        {
+            Attack();
+        }
     }
 
     public void Jump()
@@ -91,14 +104,6 @@ public class PlayerController : MonoBehaviour
     public void SetMobileHorizontalInput(float input)
     {
         horizontalInput = input;
-    }
-
-    private void Flip()
-    {
-        isFacingRight = !isFacingRight;
-        Vector3 scale = transform.localScale;
-        scale.x *= -1;
-        transform.localScale = scale;
     }
 
     private void UpdateAnimations()
