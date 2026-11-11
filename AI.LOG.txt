@@ -1,0 +1,7 @@
+AI Interaction Log - Worm Slayer Project
+
+1. Inquiry: How to configure and use the Unity Input System (Action-based) with On-Screen controls and EventSystem for mobile platform input handling.
+   Summary of guidance: Set up the PlayerInput component, hook up OnMove, OnJump, and OnAttack methods to corresponding InputAction references, and link On-Screen Stick/Button UI components to the Input Action Asset.
+
+2. Inquiry: Why the character did not flip or respond properly to mobile inputs and how to fix background UI blocking touch events.
+   Summary of guidance: Disabled "Raycast Target" on background full-screen UI panels to allow touch events to pass through to the virtual joystick/buttons. Refactored the character movement and Flip logic in PlayerController.cs to check horizontalInput values directly and assign absolute local scales (Mathf.Abs) to avoid scale desynchronization.

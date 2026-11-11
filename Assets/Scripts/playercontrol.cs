@@ -6,7 +6,7 @@ public class PlayerController : MonoBehaviour
 {
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 8f;
-    [SerializeField] private float jumpForce = 14f;
+    [SerializeField] private float jumpForce = 6f;
 
     [Header("Ground Check")]
     [SerializeField] private Transform groundCheck;
@@ -19,12 +19,9 @@ public class PlayerController : MonoBehaviour
 
     private float horizontalInput;
     private bool isGrounded;
-    private bool isFacingRight = true;
 
     private static readonly int SpeedHash = Animator.StringToHash("Speed");
     private static readonly int IsGroundedHash = Animator.StringToHash("IsGrounded");
-    private static readonly int JumpTriggerHash = Animator.StringToHash("Jump");
-    private static readonly int AttackTriggerHash = Animator.StringToHash("Attack");
 
     private void Awake()
     {
@@ -41,14 +38,12 @@ public class PlayerController : MonoBehaviour
 
         if (horizontalInput > 0)
         {
-            isFacingRight = true;
             Vector3 scale = transform.localScale;
             scale.x = Mathf.Abs(scale.x);
             transform.localScale = scale;
         }
         else if (horizontalInput < 0)
         {
-            isFacingRight = false;
             Vector3 scale = transform.localScale;
             scale.x = -Mathf.Abs(scale.x);
             transform.localScale = scale;
@@ -89,7 +84,7 @@ public class PlayerController : MonoBehaviour
         if (isGrounded)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
-            if (animator != null) animator.SetTrigger(JumpTriggerHash);
+            if (animator != null) animator.SetTrigger("jump");
         }
     }
 
@@ -97,7 +92,7 @@ public class PlayerController : MonoBehaviour
     {
         if (animator != null)
         {
-            animator.SetTrigger(AttackTriggerHash);
+            animator.SetTrigger("attack");
         }
     }
 
