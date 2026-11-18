@@ -5,3 +5,22 @@ AI Interaction Log - Worm Slayer Project
 
 2. Inquiry: Why the character did not flip or respond properly to mobile inputs and how to fix background UI blocking touch events.
    Summary of guidance: Disabled "Raycast Target" on background full-screen UI panels to allow touch events to pass through to the virtual joystick/buttons. Refactored the character movement and Flip logic in PlayerController.cs to check horizontalInput values directly and assign absolute local scales (Mathf.Abs) to avoid scale desynchronization.
+
+Project: 2D Platformer (Unity 6)
+Feature Branch: feature/enemy-ai-setup
+Date: November 12, 2026
+
+1. USER INTENT & SCOPE:
+- Implemented and refined AI behaviors for three distinct 2D enemy archetypes (Slime, Flying Shooter, and Charger) using Finite State Machine (FSM) architecture.
+- Configured visual detection cones, vision rays (Raycast2D), waypoint-based/distance-based patrolling, combat state transitions, and animation trigger integration.
+
+2. AI AGENT ASSISTANCE & REFINEMENTS:
+- Prompted AI for state machine scaffolding and movement/combat routines.
+- Corrected AI logic for enemy sight queries to prevent self-collision issues on obstacle layers.
+- Resolved Slime patrol edge-cases by transitioning from fragile waypoint array indexing to a robust distance-based ping-pong movement relative to initial spawn coordinates.
+- Fixed Flying Shooter projectile initialization, decoupling gravity and enforcing straight-line trajectory targeting with a 3-second lifespan.
+- Standardized Charger wind-up, linear dash mechanics, wall collision detection, stun recovery timers, and mapped state transitions to the "Attack" animation trigger.
+
+3. OUTCOME & STATUS:
+- All three enemy behaviors tested and confirmed fully functional in Unity 6 Play mode.
+- Changes safely staged, committed, and pushed to the feature branch 'feature/enemy-ai-setup'.

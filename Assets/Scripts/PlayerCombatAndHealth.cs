@@ -48,7 +48,6 @@ public class PlayerHealth : MonoBehaviour
 
     public void TryAttack()
     {
-        // Атака больше не требует стамины
         if (animator != null)
         {
             animator.SetTrigger("Attack");
@@ -59,7 +58,6 @@ public class PlayerHealth : MonoBehaviour
     {
         if (healthSlider != null)
         {
-            // Плавное уменьшение/увеличение полоски здоровья
             healthSlider.value = Mathf.Lerp(healthSlider.value, currentHealth, Time.deltaTime * 10f);
         }
     }
@@ -67,6 +65,10 @@ public class PlayerHealth : MonoBehaviour
     private void Die()
     {
         Debug.Log("Игрок погиб!");
+        if (animator != null)
+        {
+            animator.SetTrigger("Die");
+        }
+        
     }
-
 }
