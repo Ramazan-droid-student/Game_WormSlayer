@@ -10,26 +10,22 @@ public class SlimeAI : MonoBehaviour
         Attack
     }
 
+    [Header("Data Asset")]
+    [SerializeField] private EnemyStats stats; // Ссылка на ScriptableObject
+
     [Header("Movement & Patrol")]
-    [SerializeField] private float patrolDistance = 3f; // На какое расстояние вправо и влево ходить от точки старта
-    [SerializeField] private float patrolSpeed = 1.7f;
-    [SerializeField] private float chaseSpeed = 3f;
+    [SerializeField] private float patrolDistance = 3f; 
+    [SerializeField] private float attackHeight = 1f;
+    [SerializeField] private float recoveryTime = 0.8f;
+    [SerializeField] private float loseTime = 2f;
 
     private Vector2 startPosition;
-    private int patrolDirection = 1; // 1 — вправо, -1 — влево
+    private int patrolDirection = 1; 
 
     [Header("Vision & Combat")]
     [SerializeField] private Transform player;
-    [SerializeField] private float viewRange = 6f;
     [SerializeField] private float fov = 90f;
     [SerializeField] private LayerMask obstacleMask;
-
-    [SerializeField] private float attackRange = 1.5f;
-    [SerializeField] private float attackHeight = 1f;
-    [SerializeField] private float windUpTime = 0.5f;
-    [SerializeField] private float recoveryTime = 0.8f;
-    [SerializeField] private int damageAmount = 15;
-    [SerializeField] private float loseTime = 2f;
 
     [Header("Animation")]
     [SerializeField] private Animator anim;
@@ -39,13 +35,18 @@ public class SlimeAI : MonoBehaviour
     private Collider2D playerCollider;
 
     private State currentState;
-
     private float stateTimer;
     private float facingDirection = 1f;
-
     private bool hasStruck;
-
     private Vector3 initialScale;
+
+    // Свойства для безопасного чтения из ассета с дефолтными фолбэками
+    private float PatrolSpeed => stats != null ? stats.moveSpeed * 0.6f : 1.7f;
+    private float ChaseSpeed => stats != null ? stats.moveSpeed : 3f;
+    private float ViewRange => stats != null ? stats.visionRange : 6f;
+    private float AttackRange => stats != null ? stats.attackRange : 1.5f;
+    private float WindUpTime => stats != null ? stats.windUpDuration : 0.5f;
+    private int DamageAmount => stats != null ? stats.damage : 15;
 
     void Start()
     {
@@ -53,7 +54,7 @@ public class SlimeAI : MonoBehaviour
         enemyCollider = GetComponent<Collider2D>();
         initialScale = transform.localScale;
 
-        startPosition = transform.position; // Запоминаем стартовую позицию слайма
+        startPosition = transform.position;
 
         if (anim == null)
             anim = GetComponent<Animator>();
@@ -75,7 +76,6 @@ public class SlimeAI : MonoBehaviour
         {
             case State.Patrol:
                 PatrolLogic();
-
                 if (CanSeePlayer())
                     SetState(State.Chase);
                 break;
@@ -92,7 +92,6 @@ public class SlimeAI : MonoBehaviour
 
     void PatrolLogic()
     {
-        // Двигаемся влево и вправо от стартовой позиции на расстояние patrolDistance
         float targetX = startPosition.x + (patrolDistance * patrolDirection);
         Vector2 targetPos = new Vector2(targetX, transform.position.y);
 
@@ -101,10 +100,9 @@ public class SlimeAI : MonoBehaviour
         transform.position = Vector2.MoveTowards(
             transform.position,
             targetPos,
-            patrolSpeed * Time.deltaTime
+            PatrolSpeed * Time.deltaTime
         );
 
-        // Если дошли до точки — разворачиваемся в другую сторону
         if (Mathf.Abs(transform.position.x - targetX) < 0.1f)
         {
             patrolDirection *= -1;
@@ -131,12 +129,12 @@ public class SlimeAI : MonoBehaviour
             return;
         }
 
-        if (Mathf.Abs(dx) > attackRange * 0.8f)
+        if (Mathf.Abs(dx) > AttackRange * 0.8f)
         {
             transform.position = Vector2.MoveTowards(
                 transform.position,
                 new Vector2(player.position.x, transform.position.y),
-                chaseSpeed * Time.deltaTime
+                ChaseSpeed * Time.deltaTime
             );
         }
 
@@ -155,10 +153,9 @@ public class SlimeAI : MonoBehaviour
         }
 
         float dx = player.position.x - transform.position.x;
-
         FlipSprite(dx);
 
-        if (stateTimer >= windUpTime && !hasStruck)
+        if (stateTimer >= WindUpTime && !hasStruck)
         {
             hasStruck = true;
 
@@ -174,12 +171,12 @@ public class SlimeAI : MonoBehaviour
 
                 if (hp != null)
                 {
-                    hp.TakeDamage(damageAmount);
+                    hp.TakeDamage(DamageAmount);
                 }
             }
         }
 
-        if (stateTimer >= windUpTime + recoveryTime)
+        if (stateTimer >= WindUpTime + recoveryTime)
         {
             SetState(State.Chase);
         }
@@ -193,7 +190,7 @@ public class SlimeAI : MonoBehaviour
         float dx = Mathf.Abs(player.position.x - transform.position.x);
         float dy = Mathf.Abs(player.position.y - transform.position.y);
 
-        if (dx > attackRange || dy > attackHeight)
+        if (dx > AttackRange || dy > attackHeight)
             return false;
 
         if (enemyCollider != null && playerCollider != null)
@@ -222,7 +219,7 @@ public class SlimeAI : MonoBehaviour
         Vector2 targetEye = (Vector2)player.position + Vector2.up * 0.5f;
         Vector2 toPlayer = targetEye - eye;
 
-        if (toPlayer.magnitude > viewRange)
+        if (toPlayer.magnitude > ViewRange)
             return false;
 
         Vector2 facingVector = new Vector2(facingDirection, 0f);
@@ -273,8 +270,11 @@ public class SlimeAI : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
+        float currentViewRange = stats != null ? stats.visionRange : 6f;
+        float currentAttackRange = stats != null ? stats.attackRange : 1.5f;
+
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, viewRange);
+        Gizmos.DrawWireSphere(transform.position, currentViewRange);
 
         Gizmos.color = Color.red;
 
@@ -282,12 +282,12 @@ public class SlimeAI : MonoBehaviour
                        Vector3.right * facingDirection;
 
         Vector3 right = Quaternion.Euler(0, 0, -fov / 2f) *
-                        Vector3.right * facingDirection;
+                         Vector3.right * facingDirection;
 
-        Gizmos.DrawRay(transform.position, left * viewRange);
-        Gizmos.DrawRay(transform.position, right * viewRange);
+        Gizmos.DrawRay(transform.position, left * currentViewRange);
+        Gizmos.DrawRay(transform.position, right * currentViewRange);
 
         Gizmos.color = Color.green;
-        Gizmos.DrawWireSphere(transform.position, attackRange);
+        Gizmos.DrawWireSphere(transform.position, currentAttackRange);
     }
 }

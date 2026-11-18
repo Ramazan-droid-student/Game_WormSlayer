@@ -11,10 +11,11 @@ public class FlyingShooterAI : MonoBehaviour
         Cooldown
     }
 
+    [Header("Data Asset")]
+    [SerializeField] private EnemyStats stats;
+
     [Header("Movement & Flight")]
     [SerializeField] private Transform[] waypoints;
-    [SerializeField] private float patrolSpeed = 2f;
-    [SerializeField] private float flightSpeed = 3f;
     [SerializeField] private float hoverHeight = 2f;
     private int currentWaypointIndex = 0;
 
@@ -22,8 +23,6 @@ public class FlyingShooterAI : MonoBehaviour
     [SerializeField] private Transform player;
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private Transform firePoint;
-    [SerializeField] private float viewRange = 7f;
-    [SerializeField] private float shootRange = 6f;
     [SerializeField] private float aimTime = 0.5f;
     [SerializeField] private float cooldownTime = 1.5f;
     [SerializeField] private LayerMask obstacleMask;
@@ -41,7 +40,7 @@ public class FlyingShooterAI : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
-        rb.gravityScale = 0f; // Отключаем гравитацию для летающего моба
+        rb.gravityScale = 0f;
         initialScale = transform.localScale;
 
         if (anim == null)
@@ -78,13 +77,13 @@ public class FlyingShooterAI : MonoBehaviour
 
     void PatrolLogic()
     {
-        if (waypoints == null || waypoints.Length == 0)
+        if (waypoints == null || waypoints.Length == 0 || stats == null)
             return;
 
         Vector2 targetPos = waypoints[currentWaypointIndex].position;
         FlipSprite(targetPos.x - transform.position.x);
 
-        transform.position = Vector2.MoveTowards(transform.position, targetPos, patrolSpeed * Time.deltaTime);
+        transform.position = Vector2.MoveTowards(transform.position, targetPos, stats.moveSpeed * Time.deltaTime);
 
         if (Vector2.Distance(transform.position, targetPos) < 0.2f)
         {
@@ -96,8 +95,9 @@ public class FlyingShooterAI : MonoBehaviour
     {
         bool sees = CanSeePlayer();
         float dist = player != null ? Vector2.Distance(transform.position, player.position) : Mathf.Infinity;
+        float shootRange = stats != null ? stats.attackRange * 3f : 6f;
 
-        if (player != null)
+        if (player != null && stats != null)
         {
             FlipSprite(player.position.x - transform.position.x);
 
@@ -105,7 +105,7 @@ public class FlyingShooterAI : MonoBehaviour
             {
                 unseenTimer = 0f;
                 Vector2 targetPos = new Vector2(player.position.x, player.position.y + hoverHeight);
-                transform.position = Vector2.MoveTowards(transform.position, targetPos, flightSpeed * Time.deltaTime);
+                transform.position = Vector2.MoveTowards(transform.position, targetPos, stats.moveSpeed * 1.2f * Time.deltaTime);
             }
             else
             {
@@ -139,12 +139,11 @@ public class FlyingShooterAI : MonoBehaviour
 
     void CooldownLogic()
     {
-        bool sees = CanSeePlayer();
-        if (player != null)
+        if (player != null && stats != null)
         {
             FlipSprite(player.position.x - transform.position.x);
             Vector2 targetPos = new Vector2(player.position.x, player.position.y + hoverHeight);
-            transform.position = Vector2.MoveTowards(transform.position, targetPos, (flightSpeed * 0.7f) * Time.deltaTime);
+            transform.position = Vector2.MoveTowards(transform.position, targetPos, (stats.moveSpeed * 0.8f) * Time.deltaTime);
         }
 
         if (stateTimer >= cooldownTime)
@@ -165,7 +164,7 @@ public class FlyingShooterAI : MonoBehaviour
 
         if (bulletRb != null)
         {
-            bulletRb.gravityScale = 0f; // Снаряд летит прямо без падения
+            bulletRb.gravityScale = 0f;
             Vector2 shootDir = (player.position - firePoint.position).normalized;
             float bulletSpeed = 6f;
             bulletRb.linearVelocity = shootDir * bulletSpeed;
@@ -174,13 +173,13 @@ public class FlyingShooterAI : MonoBehaviour
 
     bool CanSeePlayer()
     {
-        if (player == null) return false;
+        if (player == null || stats == null) return false;
 
         Vector2 eye = transform.position;
         Vector2 targetEye = player.position;
         Vector2 toPlayer = targetEye - eye;
 
-        if (toPlayer.magnitude > viewRange) return false;
+        if (toPlayer.magnitude > stats.visionRange) return false;
 
         RaycastHit2D hit = Physics2D.Raycast(eye, toPlayer.normalized, toPlayer.magnitude, obstacleMask);
         return hit.collider == null;
@@ -208,10 +207,13 @@ public class FlyingShooterAI : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, viewRange);
+        if (stats != null)
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(transform.position, stats.visionRange);
 
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(transform.position, shootRange);
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(transform.position, stats.attackRange * 3f);
+        }
     }
 }

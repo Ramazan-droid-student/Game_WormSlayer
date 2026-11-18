@@ -11,10 +11,11 @@ public class ChargerAI : MonoBehaviour
         Stunned
     }
 
+    [Header("Data Asset")]
+    [SerializeField] private EnemyStats stats;
+
     [Header("Movement & Patrol")]
     [SerializeField] private Transform[] waypoints;
-    [SerializeField] private float patrolSpeed = 2f;
-    [SerializeField] private float dashSpeed = 12f;
     [SerializeField] private float maxDashDistance = 6f;
 
     private int currentWaypointIndex = 0;
@@ -22,13 +23,8 @@ public class ChargerAI : MonoBehaviour
 
     [Header("Vision & Combat")]
     [SerializeField] private Transform player;
-    [SerializeField] private float viewRange = 6f;
     [SerializeField] private float fov = 90f;
     [SerializeField] private LayerMask obstacleMask;
-
-    [SerializeField] private float windUpTime = 0.7f;
-    [SerializeField] private float stunTime = 1.0f;
-    [SerializeField] private int damageAmount = 20;
 
     [Header("Animation")]
     [SerializeField] private Animator anim;
@@ -84,7 +80,7 @@ public class ChargerAI : MonoBehaviour
 
     void PatrolLogic()
     {
-        if (waypoints == null || waypoints.Length < 2)
+        if (waypoints == null || waypoints.Length < 2 || stats == null)
             return;
 
         if (waypoints[currentWaypointIndex] == null)
@@ -96,7 +92,7 @@ public class ChargerAI : MonoBehaviour
         transform.position = Vector2.MoveTowards(
             transform.position,
             targetPos,
-            patrolSpeed * Time.deltaTime
+            stats.moveSpeed * Time.deltaTime
         );
 
         if (Vector2.Distance(transform.position, targetPos) < 0.1f)
@@ -120,7 +116,9 @@ public class ChargerAI : MonoBehaviour
             FlipSprite(dx);
         }
 
-        if (stateTimer >= windUpTime)
+        float requiredWindUp = stats != null ? stats.windUpDuration : 0.7f;
+
+        if (stateTimer >= requiredWindUp)
         {
             if (player != null)
             {
@@ -138,24 +136,25 @@ public class ChargerAI : MonoBehaviour
 
     void DashLogic()
     {
+        float dashSpeed = stats != null ? stats.moveSpeed * 3.5f : 12f; // Скорость рывка привязана к базовой
         float step = dashSpeed * Time.deltaTime;
         transform.position += (Vector3)(dashDirection * step);
         distanceTraveled += step;
+
         if (player != null && Vector2.Distance(transform.position, player.position) < 0.8f)
         {
             PlayerHealth hp = player.GetComponent<PlayerHealth>();
             if (hp == null) hp = player.GetComponentInParent<PlayerHealth>();
 
-            if (hp != null)
+            if (hp != null && stats != null)
             {
-                hp.TakeDamage(damageAmount);
+                hp.TakeDamage(stats.damage);
             }
 
             SetState(State.Stunned);
             return;
         }
 
-        // Проверяем столкновение со стеной или максимальную дистанцию
         RaycastHit2D hit = Physics2D.Raycast(transform.position, dashDirection, 0.5f, obstacleMask);
         if (hit.collider != null || distanceTraveled >= maxDashDistance)
         {
@@ -165,6 +164,8 @@ public class ChargerAI : MonoBehaviour
 
     void StunnedLogic()
     {
+        float stunTime = stats != null ? stats.stunDuration : 1.0f;
+
         if (stateTimer >= stunTime)
         {
             SetState(State.Patrol);
@@ -173,13 +174,13 @@ public class ChargerAI : MonoBehaviour
 
     bool CanSeePlayer()
     {
-        if (player == null) return false;
+        if (player == null || stats == null) return false;
 
         Vector2 eye = (Vector2)transform.position;
         Vector2 targetEye = (Vector2)player.position;
         Vector2 toPlayer = targetEye - eye;
 
-        if (toPlayer.magnitude > viewRange) return false;
+        if (toPlayer.magnitude > stats.visionRange) return false;
 
         Vector2 facingVector = new Vector2(facingDirection, 0f);
         if (Vector2.Angle(facingVector, toPlayer) > fov / 2f) return false;
@@ -218,13 +219,16 @@ public class ChargerAI : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, viewRange);
+        if (stats != null)
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(transform.position, stats.visionRange);
 
-        Gizmos.color = Color.red;
-        Vector3 left = Quaternion.Euler(0, 0, fov / 2f) * Vector3.right * facingDirection;
-        Vector3 right = Quaternion.Euler(0, 0, -fov / 2f) * Vector3.right * facingDirection;
-        Gizmos.DrawRay(transform.position, left * viewRange);
-        Gizmos.DrawRay(transform.position, right * viewRange);
+            Gizmos.color = Color.red;
+            Vector3 left = Quaternion.Euler(0, 0, fov / 2f) * Vector3.right * facingDirection;
+            Vector3 right = Quaternion.Euler(0, 0, -fov / 2f) * Vector3.right * facingDirection;
+            Gizmos.DrawRay(transform.position, left * stats.visionRange);
+            Gizmos.DrawRay(transform.position, right * stats.visionRange);
+        }
     }
 }
