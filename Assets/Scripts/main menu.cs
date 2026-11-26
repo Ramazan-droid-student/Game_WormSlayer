@@ -7,19 +7,17 @@ public class MainMenu : MonoBehaviour
     [Header("Панели меню")]
     [SerializeField] private GameObject mainMenuPanel;
     [SerializeField] private GameObject levelSelectPanel;
+    [SerializeField] private GameObject settingsPanel;
 
     [Header("Кнопки уровней (по порядку: Уровень 1, 2, 3, 4)")]
     [SerializeField] private Button[] levelButtons;
 
     void Start()
     {
-        if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
-        if (levelSelectPanel != null) levelSelectPanel.SetActive(false);
+        ShowOnly(mainMenuPanel);
 
         if (SaveManager.Instance != null)
-        {
             SaveManager.Instance.OnProgressChanged += UpdateLevelButtons;
-        }
 
         UpdateLevelButtons();
     }
@@ -27,26 +25,30 @@ public class MainMenu : MonoBehaviour
     void OnDestroy()
     {
         if (SaveManager.Instance != null)
-        {
             SaveManager.Instance.OnProgressChanged -= UpdateLevelButtons;
-        }
     }
 
     // ---------- Панели ----------
+    private void ShowOnly(GameObject panel)
+    {
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(panel == mainMenuPanel);
+        if (levelSelectPanel != null) levelSelectPanel.SetActive(panel == levelSelectPanel);
+        if (settingsPanel != null) settingsPanel.SetActive(panel == settingsPanel);
+    }
 
     public void OpenLevelSelect()
     {
-        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
-        if (levelSelectPanel != null) levelSelectPanel.SetActive(true);
-
+        ShowOnly(levelSelectPanel);
         UpdateLevelButtons();
     }
 
-    public void CloseLevelSelect()
-    {
-        if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
-        if (levelSelectPanel != null) levelSelectPanel.SetActive(false);
-    }
+    public void CloseLevelSelect() => ShowOnly(mainMenuPanel);
+
+    public void OpenSettings() => ShowOnly(settingsPanel);
+
+    public void CloseSettings() => ShowOnly(mainMenuPanel);
+
+    // ---------- Сохранение ----------
     public void OnSaveButtonPressed()
     {
         if (SaveManager.Instance != null)
@@ -58,10 +60,16 @@ public class MainMenu : MonoBehaviour
     public void OnResetButtonPressed()
     {
         if (SaveManager.Instance != null)
+        {
             SaveManager.Instance.ResetProgress();
+            // после сброса применяем звук из свежих данных
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.ApplySavedVolumes();
+        }
         else
             Debug.LogWarning("SaveManager.Instance не найден!");
     }
+
     private void UpdateLevelButtons()
     {
         if (SaveManager.Instance == null || SaveManager.Instance.currentData == null) return;
@@ -71,20 +79,13 @@ public class MainMenu : MonoBehaviour
         for (int i = 0; i < levelButtons.Length; i++)
         {
             if (levelButtons[i] == null) continue;
-
-            int levelIndex = i + 1;
-            levelButtons[i].interactable = unlockedLevels.Contains(levelIndex);
+            levelButtons[i].interactable = unlockedLevels.Contains(i + 1);
         }
     }
 
-    // Оставлено для совместимости, если где-то ещё вызывается
-    public void RefreshLevelButtons()
-    {
-        UpdateLevelButtons();
-    }
+    public void RefreshLevelButtons() => UpdateLevelButtons();
 
     // ---------- Запуск уровней ----------
-
     public void PlayLevel(string levelSceneName)
     {
         Time.timeScale = 1f;

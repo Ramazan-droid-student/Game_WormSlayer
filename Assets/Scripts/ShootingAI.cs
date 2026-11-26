@@ -200,10 +200,15 @@ public class FlyingShooterAI : MonoBehaviour
     }
 
     void SetState(State nextState)
+{
+    currentState = nextState;
+    stateTimer = 0f;
+
+    if (nextState == State.Aim && AudioManager.Instance != null)
     {
-        currentState = nextState;
-        stateTimer = 0f;
+        AudioManager.Instance.PlayEnemyWindup();
     }
+}
 
     void OnDrawGizmosSelected()
     {

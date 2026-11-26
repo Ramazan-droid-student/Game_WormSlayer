@@ -204,18 +204,23 @@ public class ChargerAI : MonoBehaviour
     }
 
     void SetState(State nextState)
-    {
-        currentState = nextState;
-        stateTimer = 0f;
+{
+    currentState = nextState;
+    stateTimer = 0f;
 
-        if (anim != null)
+    if (nextState == State.WindUp && AudioManager.Instance != null)
+    {
+        AudioManager.Instance.PlayEnemyWindup();
+    }
+
+    if (anim != null)
+    {
+        if (nextState == State.Dash)
         {
-            if (nextState == State.Dash)
-            {
-                anim.SetTrigger("Attack"); 
-            }
+            anim.SetTrigger("Attack");
         }
     }
+}
 
     void OnDrawGizmosSelected()
     {
