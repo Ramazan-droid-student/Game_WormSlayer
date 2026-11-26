@@ -262,11 +262,16 @@ public class SlimeAI : MonoBehaviour
     }
 
     void SetState(State nextState)
+{
+    currentState = nextState;
+    stateTimer = 0f;
+    hasStruck = false;
+
+    if (nextState == State.Attack && AudioManager.Instance != null)
     {
-        currentState = nextState;
-        stateTimer = 0f;
-        hasStruck = false;
+        AudioManager.Instance.PlayEnemyWindup();
     }
+}
 
     void OnDrawGizmosSelected()
     {

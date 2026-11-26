@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using UnityEngine;
 
@@ -5,6 +6,9 @@ public class SaveManager : MonoBehaviour
 {
     public static SaveManager Instance;
     public SaveData currentData;
+
+    // Вызывается, когда прогресс изменился (разблокировка, сброс, загрузка)
+    public event Action OnProgressChanged;
 
     private string savePath;
 
@@ -31,7 +35,7 @@ public class SaveManager : MonoBehaviour
             File.WriteAllText(savePath, json);
             Debug.Log("Игра успешно сохранена в: " + savePath);
         }
-        catch (System.Exception e)
+        catch (Exception e)
         {
             Debug.LogError("Ошибка при сохранении игры: " + e.Message);
         }
@@ -45,9 +49,22 @@ public class SaveManager : MonoBehaviour
             {
                 string json = File.ReadAllText(savePath);
                 currentData = JsonUtility.FromJson<SaveData>(json);
+
+                // Защита: пустой файл или битые данные
+                if (currentData == null || currentData.unlockedLevels == null)
+                {
+                    throw new Exception("Данные сохранения пусты");
+                }
+
+                // Первый уровень всегда должен быть открыт
+                if (!currentData.unlockedLevels.Contains(1))
+                {
+                    currentData.unlockedLevels.Add(1);
+                }
+
                 Debug.Log("Игра успешно загружена!");
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 Debug.LogWarning("Файл сохранения поврежден. Создаем дефолтные данные. Ошибка: " + e.Message);
                 currentData = new SaveData();
@@ -60,6 +77,8 @@ public class SaveManager : MonoBehaviour
             currentData = new SaveData();
             SaveGame();
         }
+
+        OnProgressChanged?.Invoke();
     }
 
     public void UnlockLevel(int levelIndex)
@@ -68,32 +87,26 @@ public class SaveManager : MonoBehaviour
         {
             currentData.unlockedLevels.Add(levelIndex);
             SaveGame();
+            Debug.Log("Уровень " + levelIndex + " успешно разблокирован и сохранен!");
+            OnProgressChanged?.Invoke();
         }
     }
 
-    
     public void ResetProgress()
     {
-        currentData = new SaveData();
+        currentData = new SaveData(); // открыт только 1-й уровень
         SaveGame();
         Debug.Log("Прогресс сброшен!");
-
-        MainMenu mainMenu = Object.FindFirstObjectByType<MainMenu>();
-        if (mainMenu != null)
-        {
-            mainMenu.RefreshLevelButtons();
-        }
+        OnProgressChanged?.Invoke();  // MainMenu сам обновит кнопки
     }
+
     private void OnApplicationPause(bool pauseStatus)
     {
-        if (pauseStatus)
-        {
-            SaveGame(); 
-        }
+        if (pauseStatus) SaveGame();
     }
 
     private void OnApplicationQuit()
     {
-        SaveGame(); 
+        SaveGame();
     }
 }

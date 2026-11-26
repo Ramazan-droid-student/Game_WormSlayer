@@ -1,56 +1,94 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI; // Обязательно для работы с Button
+using UnityEngine.UI;
 
 public class MainMenu : MonoBehaviour
 {
     [Header("Панели меню")]
-    [SerializeField] private GameObject mainMenuPanel; 
-    [SerializeField] private GameObject levelSelectPanel; 
+    [SerializeField] private GameObject mainMenuPanel;
+    [SerializeField] private GameObject levelSelectPanel;
+    [SerializeField] private GameObject settingsPanel;
 
-    [Header("Кнопки уровней (По порядку: Уровень 1, Уровень 2, Уровень 3)")]
-    [SerializeField] private Button[] levelButtons; 
+    [Header("Кнопки уровней (по порядку: Уровень 1, 2, 3, 4)")]
+    [SerializeField] private Button[] levelButtons;
 
     void Start()
     {
-        if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
-        if (levelSelectPanel != null) levelSelectPanel.SetActive(false);
-    }
+        ShowOnly(mainMenuPanel);
 
-    public void OpenLevelSelect()
-    {
-        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
-        if (levelSelectPanel != null) levelSelectPanel.SetActive(true);
+        if (SaveManager.Instance != null)
+            SaveManager.Instance.OnProgressChanged += UpdateLevelButtons;
 
         UpdateLevelButtons();
     }
 
-    public void CloseLevelSelect()
+    void OnDestroy()
     {
-        if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
-        if (levelSelectPanel != null) levelSelectPanel.SetActive(false);
+        if (SaveManager.Instance != null)
+            SaveManager.Instance.OnProgressChanged -= UpdateLevelButtons;
+    }
+
+    // ---------- Панели ----------
+    private void ShowOnly(GameObject panel)
+    {
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(panel == mainMenuPanel);
+        if (levelSelectPanel != null) levelSelectPanel.SetActive(panel == levelSelectPanel);
+        if (settingsPanel != null) settingsPanel.SetActive(panel == settingsPanel);
+    }
+
+    public void OpenLevelSelect()
+    {
+        ShowOnly(levelSelectPanel);
+        UpdateLevelButtons();
+    }
+
+    public void CloseLevelSelect() => ShowOnly(mainMenuPanel);
+
+    public void OpenSettings() => ShowOnly(settingsPanel);
+
+    public void CloseSettings() => ShowOnly(mainMenuPanel);
+
+    // ---------- Сохранение ----------
+    public void OnSaveButtonPressed()
+    {
+        if (SaveManager.Instance != null)
+            SaveManager.Instance.SaveGame();
+        else
+            Debug.LogWarning("SaveManager.Instance не найден!");
+    }
+
+    public void OnResetButtonPressed()
+    {
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.ResetProgress();
+            // после сброса применяем звук из свежих данных
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.ApplySavedVolumes();
+        }
+        else
+            Debug.LogWarning("SaveManager.Instance не найден!");
     }
 
     private void UpdateLevelButtons()
     {
-        if (SaveManager.Instance == null) return;
+        if (SaveManager.Instance == null || SaveManager.Instance.currentData == null) return;
 
         var unlockedLevels = SaveManager.Instance.currentData.unlockedLevels;
 
         for (int i = 0; i < levelButtons.Length; i++)
         {
             if (levelButtons[i] == null) continue;
-
-            int levelIndex = i + 1; 
-            bool isUnlocked = unlockedLevels.Contains(levelIndex);
-
-            levelButtons[i].interactable = isUnlocked;
+            levelButtons[i].interactable = unlockedLevels.Contains(i + 1);
         }
     }
 
+    public void RefreshLevelButtons() => UpdateLevelButtons();
+
+    // ---------- Запуск уровней ----------
     public void PlayLevel(string levelSceneName)
     {
-        Time.timeScale = 1f; 
+        Time.timeScale = 1f;
         SceneManager.LoadScene(levelSceneName);
     }
 
@@ -58,10 +96,6 @@ public class MainMenu : MonoBehaviour
     {
         Time.timeScale = 1f;
         SceneManager.LoadScene(levelSceneName);
-    }
-    public void RefreshLevelButtons()
-    {
-        UpdateLevelButtons();
     }
 
     public void QuitGame()
